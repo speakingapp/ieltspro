@@ -1,0 +1,36 @@
+---
+import Layout from "@layouts/Layout.astro";
+
+const { cookies, redirect } = Astro;
+
+const accessToken = cookies.get("sb-access-token");
+const refreshToken = cookies.get("sb-refresh-token");
+
+if (accessToken && refreshToken) {
+  return redirect("/dashboard");
+}
+---
+
+<Layout title="Sign in">
+<nav class="sticky top-0 py-4 bg-gray-800 px-3 py-2 w-full flex items-center justify-between gap-x-2">
+    <a class="mx-3 flex items-center" href="/">
+    <p class="mx-2 text-2xl font-bold text-white">IELTS PRO</p>
+    </a>
+</nav>
+<main class="container px-4 mx-auto min-h-screen flex justify-center items-center flex-col">
+<div class="flex items-center">
+  <img src="/favicon.png" class="w-10 h-10 mb-5 mt-3">
+  <p class="text-2xl font-bold">IELTS PRO</p>
+</div>
+  <form action="/api/auth/login" method="post" class="p-8 container sm:w-[450px] h-auto pb-10 rounded-xl border-2 border-gray-200 flex flex-col">
+    <h1 class="text-4xl font-bold py-2">Login</h1>
+    <label for="email" for="email" class="text-xl font-medium py-2">Email</label>
+    <input type="email" class="bg-white border border-gray-400 rounded-lg py-3 focus:border-blue-600" name="email" id="email" />
+    <label for="password" class="text-xl font-medium py-2">Password</label>
+    <input class="bg-white border border-gray-400 rounded-lg py-3 focus:border-blue-600" type="password" name="password" id="password" />
+    <button type="submit" class="bg-gray-800 text-white text-lg rounded-lg py-3 px-5 mt-4">Log in</button>
+
+    <p class="mt-4  text-lg text-center">Don't have an account? <a class="text-blue-600" href="/register">Sign Up</a></p>
+  </form>
+</main>
+</Layout>
