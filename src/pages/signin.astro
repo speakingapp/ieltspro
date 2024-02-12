@@ -1,13 +1,16 @@
 ---
 import Layout from "@layouts/Layout.astro";
+import { app } from "@lib/server";
+import { getAuth } from "firebase-admin/auth";
 
-const { cookies, redirect } = Astro;
-
-const accessToken = cookies.get("sb-access-token");
-const refreshToken = cookies.get("sb-refresh-token");
-
-if (accessToken && refreshToken) {
-  return redirect("/dashboard");
+/* Check if the user is authenticated */
+const auth = getAuth(app);
+if (Astro.cookies.has("session")) {
+  const sessionCookie = Astro.cookies.get("session").value;
+  const decodedCookie = await auth.verifySessionCookie(sessionCookie);
+  if (decodedCookie) {
+    return Astro.redirect("/dashboard");
+  }
 }
 ---
 
@@ -22,7 +25,7 @@ if (accessToken && refreshToken) {
   <img src="/favicon.png" class="w-10 h-10 mb-5 mt-3">
   <p class="text-2xl font-bold">IELTS PRO</p>
 </div>
-  <form action="/api/auth/login" method="post" class="p-8 container sm:w-[450px] h-auto pb-10 rounded-xl border-2 border-gray-200 flex flex-col">
+  <form action="/api/auth/signin" method="post" class="p-8 container sm:w-[450px] h-auto pb-10 rounded-xl border-2 border-gray-200 flex flex-col">
     <h1 class="text-4xl font-bold py-2">Login</h1>
     <label for="email" for="email" class="text-xl font-medium py-2">Email</label>
     <input type="email" class="bg-white border border-gray-400 rounded-lg py-3 focus:border-blue-600" name="email" id="email" />
@@ -34,3 +37,64 @@ if (accessToken && refreshToken) {
   </form>
 </main>
 </Layout>
+
+<script>
+  import Swal from 'sweetalert2'
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup
+  } from "firebase/auth";
+  import { app } from "@lib/client";
+
+  const auth = getAuth(app);
+  const form = document.querySelector("form") as HTMLFormElement;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const email = formData.get("email")?.toString();
+    const password = formData.get("password")?.toString();
+
+    if (!email || !password) {
+      return;
+    }
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const idToken = await userCredential.user.getIdToken();
+      const response = await fetch("/api/auth/signin", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.redirected) {
+        window.location.assign(response.url);
+      } else {
+        Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Muvafaqqiyatli kirish",
+        showConfirmButton: false,
+        timer: 1500
+      });
+      }
+    } catch (error) {
+      // Show error alert
+      Swal.fire({
+      icon: "error",
+      title: "Voy...",
+      text: "Login yoki parol xato!"
+});
+    }
+
+  });
+  
+</script>

@@ -1,46 +1,27 @@
 ---
 import Layout from "@layouts/Layout.astro";
-import { supabase } from "@lib/supabase";
+import { app } from "@lib/server";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
-const { cookies, redirect } = Astro;
 
-const accessToken = cookies.get("sb-access-token");
-const refreshToken = cookies.get("sb-refresh-token");
+const auth = getAuth(app);
+const db = getFirestore(app)
 
-if (!accessToken || !refreshToken) {
-  return redirect("/signin");
+/* Check current session */
+if (!Astro.cookies.has("session")) {
+  return Astro.redirect("/signin");
+}
+const sessionCookie = Astro.cookies.get("session").value;
+const decodedCookie = await auth.verifySessionCookie(sessionCookie);
+const user = await auth.getUser(decodedCookie.uid);
+
+if (!user) {
+  return Astro.redirect("/signin");
 }
 
-const { data, error } = await supabase.auth.setSession({
-  refresh_token: refreshToken.value,
-  access_token: accessToken.value,
-});
 
-if (error) {
-  cookies.delete("sb-access-token", {
-    path: "/",
-  });
-  cookies.delete("sb-refresh-token", {
-    path: "/",
-  });
-
-  return redirect("/signin");
-}
-
-const {email, id, created_at} = data.user
-const {name, avatar} = data.user.user_metadata
-
-var date = new Date(created_at);
-
-const options = {
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-};
-
-const joinDate = date.toLocaleDateString('en-US', options)
-
+const {displayName, email, uid, photoURL} = user
 
 var topics =[
 {
@@ -75,15 +56,14 @@ var topics =[
 <header class="py-2 px-4 w-full sticky top-0 flex items-center justify-between  bg-gray-800 shadow-xl z-10">
    <a href="/" class="mx-2 text-xl font-bold text-white">IELTS PRO</a>
    <div id="avatar-menu" class="relative inline-block">
-   <img id="bar" src={avatar} class="mx-2 cursor-pointer w-10 h-10 rounded-full bg-white"> 
+   <img id="bar" src={photoURL} class="mx-2 cursor-pointer w-10 h-10 rounded-full bg-blue-500"> 
       <div id="menu-bar" class="hidden absolute mt-2 right-0 bg-white border border-gray-200 bg-gray-100 p-5 shadow rounded-lg z-10">
       <ul>
       <li class="text-xl font-medium">
-      {name}
+      {displayName}
       </li>
       <li><small class=""><span class="text-blue-600">{email}</span></small></li>
-      <li class="text-sm"><b>Joined:</b> {joinDate}</li>
-      <li><form action="/api/auth/logout">
+      <li><form action="/api/auth/signout">
           <button class="text-white bg-rose-600 py-2 mt-3 px-5 rounded-2xl w-full font-medium" type="submit">Sign out</button>
         </form>
       </li>
